@@ -1,0 +1,41 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Iinclude",
+      "-o",
+      "obj/file.o",
+      "src/file.c"
+    ],
+    "directory": "/home/pedro/www/file-database",
+    "file": "/home/pedro/www/file-database/src/file.c",
+    "output": "/home/pedro/www/file-database/obj/file.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Iinclude",
+      "-o",
+      "obj/main.o",
+      "src/main.c"
+    ],
+    "directory": "/home/pedro/www/file-database",
+    "file": "/home/pedro/www/file-database/src/main.c",
+    "output": "/home/pedro/www/file-database/obj/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Iinclude",
+      "-o",
+      "obj/parse.o",
+      "src/parse.c"
+    ],
+    "directory": "/home/pedro/www/file-database",
+    "file": "/home/pedro/www/file-database/src/parse.c",
+    "output": "/home/pedro/www/file-database/obj/parse.o"
+  }
+]

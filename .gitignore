@@ -1,3 +1,15 @@
+#bin
+bin/*
+
+#clangd
+.cache
+
+#db
+*.db
+
+#obj
+obj/*
+
 # Prerequisites
 *.d
 
