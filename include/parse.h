@@ -1,6 +1,7 @@
 #ifndef PARSE_H
 #define PARSE_H
 
+#include <stdbool.h>
 #define HEADER_MAGIC 0x4c4c4144
 
 struct dbheader_t {
@@ -14,6 +15,7 @@ struct employee_t {
   char name[256];
   char address[256];
   unsigned int hours;
+  bool deleted;
 };
 
 int create_db_header(int fd, struct dbheader_t **headerOut);
