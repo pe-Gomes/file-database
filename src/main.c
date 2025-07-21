@@ -12,6 +12,7 @@ void print_usage(char *argv[]) {
   printf("Usage: %s [-n] [-f <filename>]\n", argv[0]);
   printf("\t -n - create a new database\n");
   printf("\t -f - (required) path to database file\n");
+  printf("\t -l - list database file\n");
 
   return;
 }
@@ -20,11 +21,15 @@ int main(int argc, char *argv[]) {
   int c = 0;
 
   bool newfile = false;
-  char *filepath = NULL;
+  bool listdb = false;
   int dbfd = -1;
+  char *filepath = NULL;
   struct dbheader_t *dbhdr = NULL;
 
-  while ((c = getopt(argc, argv, "nf:")) != -1) {
+  struct employee_t *employees = NULL;
+  char *addstring = NULL;
+
+  while ((c = getopt(argc, argv, "nlf:a:")) != -1) {
     switch (c) {
     case 'n':
       printf("Creating a new database file.\n");
@@ -33,6 +38,14 @@ int main(int argc, char *argv[]) {
 
     case 'f':
       filepath = optarg;
+      break;
+
+    case 'a':
+      addstring = optarg;
+      break;
+
+    case 'l':
+      listdb = true;
       break;
 
     case '?':
@@ -78,10 +91,35 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (output_file(dbfd, dbhdr, NULL) == STATUS_ERROR) {
+  if (read_employees(dbfd, dbhdr, &employees) == STATUS_ERROR) {
+
+    printf("Error reading employees from database.\n");
+    return -1;
+  }
+
+  if (listdb) {
+    list_employees(dbhdr, employees);
+  }
+
+  if (addstring) {
+    dbhdr->count++;
+    employees = realloc(employees, dbhdr->count * sizeof(struct employee_t));
+
+    if (add_employee(dbhdr, employees, addstring) == STATUS_ERROR) {
+      printf("Error adding employee to database.\n");
+      return -1;
+    }
+
+    dbhdr->filesize =
+        sizeof(struct dbheader_t) + (dbhdr->count * sizeof(struct employee_t));
+  }
+
+  if (output_file(dbfd, dbhdr, employees) == STATUS_ERROR) {
     printf("Error writing database header to file.\n");
     return -1;
   }
+
+  close(dbfd);
 
   return 0;
 }

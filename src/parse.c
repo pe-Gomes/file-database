@@ -10,15 +10,68 @@
 #include "common.h"
 #include "parse.h"
 
-void list_employees(struct dbheader_t *dbhdr, struct employee_t *employees) {}
+void list_employees(struct dbheader_t *dbhdr, struct employee_t *employees) {
+  for (int i = 0; i < dbhdr->count; i++) {
+    printf("Employee %d:\n\t Name: %s, Address: %s, Hours: %d\n", i,
+           employees[i].name, employees[i].address, employees[i].hours);
+  }
+}
 
 int add_employee(struct dbheader_t *dbhdr, struct employee_t *employees,
                  char *addstring) {
+  char *name = strtok(addstring, ",");
+  char *address = strtok(NULL, ",");
+  char *hours = strtok(NULL, ",");
+
+  int last_employee_count = dbhdr->count - 1;
+
+  strncpy(employees[last_employee_count].name, name,
+          sizeof(employees[last_employee_count].name));
+
+  strncpy(employees[last_employee_count].address, address,
+          sizeof(employees[last_employee_count].address));
+
+  employees[last_employee_count].hours = atoi(hours);
+
   return STATUS_SUCCESS;
 }
 
+int delete_employee_by_id(struct dbheader_t *dbhdr,
+                          struct employee_t *employees, int id) {}
+
 int read_employees(int fd, struct dbheader_t *dbhdr,
                    struct employee_t **employeesOut) {
+  if (fd < 0) {
+    printf("Invalid file descriptor.\n");
+    return STATUS_ERROR;
+  }
+
+  int count = dbhdr->count;
+
+  if (count == 0) {
+    printf("No employees in the database.\n");
+    return STATUS_SUCCESS;
+  }
+
+  struct employee_t *employees = calloc(count, sizeof(struct employee_t));
+  if (employees == NULL) {
+    perror("calloc");
+    return STATUS_ERROR;
+  }
+
+  if (read(fd, employees, sizeof(struct employee_t) * count) !=
+      sizeof(struct employee_t) * count) {
+    perror("read");
+    free(employees);
+    return STATUS_ERROR;
+  }
+
+  for (int i = 0; i < count; i++) {
+    employees[i].hours = ntohl(employees[i].hours);
+  }
+
+  *employeesOut = employees;
+
   return STATUS_SUCCESS;
 }
 
@@ -29,13 +82,32 @@ int output_file(int fd, struct dbheader_t *dbhdr,
     return STATUS_ERROR;
   }
 
-  dbhdr->magic = htonl(dbhdr->magic);
-  dbhdr->filesize = htonl(dbhdr->filesize);
-  dbhdr->count = htons(dbhdr->count);
-  dbhdr->version = htons(dbhdr->version);
+  struct dbheader_t hdr_to_write = *dbhdr;
+  hdr_to_write.magic = htonl(dbhdr->magic);
+  hdr_to_write.filesize = htonl(dbhdr->filesize);
+  hdr_to_write.count = htons(dbhdr->count);
+  hdr_to_write.version = htons(dbhdr->version);
 
-  lseek(fd, 0, SEEK_SET);
-  write(fd, dbhdr, sizeof(struct dbheader_t));
+  if (lseek(fd, 0, SEEK_SET) == -1) {
+    perror("lseek");
+    return STATUS_ERROR;
+  }
+
+  if (write(fd, &hdr_to_write, sizeof(struct dbheader_t)) !=
+      sizeof(struct dbheader_t)) {
+    perror("write");
+    return STATUS_ERROR;
+  }
+
+  for (int i = 0; i < dbhdr->count; i++) {
+    struct employee_t emp_to_write = employees[i];
+    emp_to_write.hours = htonl(employees[i].hours);
+    if (write(fd, &emp_to_write, sizeof(struct employee_t)) !=
+        sizeof(struct employee_t)) {
+      perror("write");
+      return STATUS_ERROR;
+    }
+  }
 
   return STATUS_SUCCESS;
 }
@@ -102,7 +174,6 @@ int create_db_header(int fd, struct dbheader_t **headerOut) {
 
   if (header == NULL) {
     perror("calloc");
-    free(header);
     return STATUS_ERROR;
   }
 
