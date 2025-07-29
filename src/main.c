@@ -9,10 +9,14 @@
 #include "parse.h"
 
 void print_usage(char *argv[]) {
-  printf("Usage: %s [-n] [-f <filename>]\n", argv[0]);
+  printf("Usage: %s [-n <name,address,hours>] [-l] [-f <filename>] [-s <name>] "
+         "[-d <id>]\n",
+         argv[0]);
   printf("\t -n - create a new database\n");
   printf("\t -f - (required) path to database file\n");
-  printf("\t -l - list database file\n");
+  printf("\t -d - (required) employee id\n");
+  printf("\t -l - list employees\n");
+  printf("\t -s - search employees by name \n");
 
   return;
 }
@@ -21,15 +25,18 @@ int main(int argc, char *argv[]) {
   int c = 0;
 
   bool newfile = false;
-  bool listdb = false;
+  bool list = false;
+  bool delete = false;
+
   int dbfd = -1;
   char *filepath = NULL;
+  char *string_id = NULL;
   struct dbheader_t *dbhdr = NULL;
 
   struct employee_t *employees = NULL;
   char *addstring = NULL;
 
-  while ((c = getopt(argc, argv, "nlf:a:")) != -1) {
+  while ((c = getopt(argc, argv, "nlf:a:d:")) != -1) {
     switch (c) {
     case 'n':
       printf("Creating a new database file.\n");
@@ -45,7 +52,12 @@ int main(int argc, char *argv[]) {
       break;
 
     case 'l':
-      listdb = true;
+      list = true;
+      break;
+
+    case 'd':
+      delete = true;
+      string_id = optarg;
       break;
 
     case '?':
@@ -92,13 +104,29 @@ int main(int argc, char *argv[]) {
   }
 
   if (read_employees(dbfd, dbhdr, &employees) == STATUS_ERROR) {
-
     printf("Error reading employees from database.\n");
     return -1;
   }
 
-  if (listdb) {
+  if (list) {
     list_employees(dbhdr, employees);
+  }
+
+  if (delete) {
+    if (dbhdr->count == 0) {
+      printf("No employees to delete.\n");
+      return 0;
+    }
+
+    if (string_id == NULL) {
+      printf("No ID specified for deletion. Use -d <id> to specify an ID.\n");
+      return -1;
+    }
+
+    if (delete_employee(dbhdr, employees, string_id) == STATUS_ERROR) {
+      printf("Error deleting employee with ID %s.\n", string_id);
+      return -1;
+    }
   }
 
   if (addstring) {

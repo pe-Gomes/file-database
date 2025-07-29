@@ -12,8 +12,10 @@
 
 void list_employees(struct dbheader_t *dbhdr, struct employee_t *employees) {
   for (int i = 0; i < dbhdr->count; i++) {
-    printf("Employee %d:\n\t Name: %s, Address: %s, Hours: %d\n", i,
-           employees[i].name, employees[i].address, employees[i].hours);
+    if (!employees[i].deleted) {
+      printf("Employee %d:\n\t Name: %s, Address: %s, Hours: %d\n", i,
+             employees[i].name, employees[i].address, employees[i].hours);
+    }
   }
 }
 
@@ -32,12 +34,24 @@ int add_employee(struct dbheader_t *dbhdr, struct employee_t *employees,
           sizeof(employees[last_employee_count].address));
 
   employees[last_employee_count].hours = atoi(hours);
+  employees[last_employee_count].deleted = false;
 
   return STATUS_SUCCESS;
 }
 
-int delete_employee_by_id(struct dbheader_t *dbhdr,
-                          struct employee_t *employees, int id) {}
+int delete_employee(struct dbheader_t *dbhdr, struct employee_t *employees,
+                    char *identifier) {
+  if (dbhdr->count == 0) {
+    printf("No employees to delete.\n");
+    return STATUS_ERROR;
+  }
+
+  int id = atoi(identifier);
+
+  employees[id].deleted = true;
+
+  return STATUS_SUCCESS;
+}
 
 int read_employees(int fd, struct dbheader_t *dbhdr,
                    struct employee_t **employeesOut) {
