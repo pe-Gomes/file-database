@@ -21,63 +21,61 @@ void print_usage(char *argv[]) {
   return;
 }
 
-int main(int argc, char *argv[]) {
-  int c = 0;
+struct command_line_args {
+  bool newfile;
+  bool list;
+  bool delete;
+  char *filepath;
+  char *string_id;
+  char *addstring;
+  char *search_name;
+};
 
-  bool newfile = false;
-  bool list = false;
-  bool delete = false;
-
-  int dbfd = -1;
-  char *filepath = NULL;
-  char *string_id = NULL;
-  struct dbheader_t *dbhdr = NULL;
-
-  struct employee_t *employees = NULL;
-  char *addstring = NULL;
-
-  while ((c = getopt(argc, argv, "nlf:a:d:")) != -1) {
+void parse_args(int argc, char *argv[], struct command_line_args *args) {
+  int c;
+  while ((c = getopt(argc, argv, "nlf:a:d:s:")) != -1) {
     switch (c) {
     case 'n':
-      printf("Creating a new database file.\n");
-      newfile = true;
+      args->newfile = true;
       break;
-
-    case 'f':
-      filepath = optarg;
-      break;
-
-    case 'a':
-      addstring = optarg;
-      break;
-
     case 'l':
-      list = true;
+      args->list = true;
       break;
-
     case 'd':
-      delete = true;
-      string_id = optarg;
+      args->delete = true;
+      args->string_id = optarg;
       break;
-
+    case 'f':
+      args->filepath = optarg;
+      break;
+    case 'a':
+      args->addstring = optarg;
+      break;
+    case 's':
+      args->search_name = optarg;
+      break;
     case '?':
-      printf("Unknown option: %c\n", optopt);
       print_usage(argv);
-      break;
-
-    default:
-      printf("Unknown error occurred.\n");
-      return -1;
+      exit(0);
     }
   }
+}
 
-  if (filepath == NULL) {
+int main(int argc, char *argv[]) {
+  struct command_line_args args = {0};
+  parse_args(argc, argv, &args);
+
+  int dbfd = -1;
+  struct dbheader_t *dbhdr = NULL;
+  struct employee_t *employees = NULL;
+
+  if (args.filepath == NULL) {
     printf("No file specified. Use -f <filename> to specify a file.\n");
     print_usage(argv);
   }
 
-  if (newfile) {
-    dbfd = create_db_file(filepath);
+  if (args.newfile) {
+    dbfd = create_db_file(args.filepath);
 
     if (dbfd == STATUS_ERROR) {
       printf("Error creating database file.\n");
@@ -90,7 +88,7 @@ int main(int argc, char *argv[]) {
     }
 
   } else {
-    dbfd = open_db_file(filepath);
+    dbfd = open_db_file(args.filepath);
 
     if (dbfd == STATUS_ERROR) {
       printf("Error opening database file.\n");
@@ -108,32 +106,32 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  if (list) {
+  if (args.list) {
     list_employees(dbhdr, employees);
   }
 
-  if (delete) {
+  if (args.delete) {
     if (dbhdr->count == 0) {
       printf("No employees to delete.\n");
       return 0;
     }
 
-    if (string_id == NULL) {
+    if (args.string_id == NULL) {
       printf("No ID specified for deletion. Use -d <id> to specify an ID.\n");
       return -1;
     }
 
-    if (delete_employee(dbhdr, employees, string_id) == STATUS_ERROR) {
-      printf("Error deleting employee with ID %s.\n", string_id);
+    if (delete_employee(dbhdr, employees, args.string_id) == STATUS_ERROR) {
+      printf("Error deleting employee with ID %s.\n", args.string_id);
       return -1;
     }
   }
 
-  if (addstring) {
+  if (args.addstring) {
     dbhdr->count++;
     employees = realloc(employees, dbhdr->count * sizeof(struct employee_t));
 
-    if (add_employee(dbhdr, employees, addstring) == STATUS_ERROR) {
+    if (add_employee(dbhdr, employees, args.addstring) == STATUS_ERROR) {
       printf("Error adding employee to database.\n");
       return -1;
     }
@@ -142,11 +140,20 @@ int main(int argc, char *argv[]) {
         sizeof(struct dbheader_t) + (dbhdr->count * sizeof(struct employee_t));
   }
 
+  if (args.search_name) {
+    search_employees(dbhdr, employees, args.search_name);
+  }
+
   if (output_file(dbfd, dbhdr, employees) == STATUS_ERROR) {
     printf("Error writing database header to file.\n");
+    free(employees);
+    free(dbhdr);
+    close(dbfd);
     return -1;
   }
 
+  free(employees);
+  free(dbhdr);
   close(dbfd);
 
   return 0;
