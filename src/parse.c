@@ -21,9 +21,37 @@ void list_employees(struct dbheader_t *dbhdr, struct employee_t *employees) {
 
 int add_employee(struct dbheader_t *dbhdr, struct employee_t *employees,
                  char *addstring) {
-  char *name = strtok(addstring, ",");
-  char *address = strtok(NULL, ",");
-  char *hours = strtok(NULL, ",");
+  char *name = addstring;
+  char *address = strchr(name, ',');
+  if (address == NULL) {
+    printf("Invalid add string format. Expected: name,address,hours\n");
+    return STATUS_ERROR;
+  }
+  *address = '\0';
+  address++;
+
+  char *hours_str = strchr(address, ',');
+  if (hours_str == NULL) {
+    printf("Invalid add string format. Expected: name,address,hours\n");
+    return STATUS_ERROR;
+  }
+  *hours_str = '\0';
+  hours_str++;
+
+  if (strlen(name) >= sizeof(employees[0].name)) {
+    printf("Employee name is too long.\n");
+    return STATUS_ERROR;
+  }
+  if (strlen(address) >= sizeof(employees[0].address)) {
+    printf("Employee address is too long.\n");
+    return STATUS_ERROR;
+  }
+
+  long hours = strtol(hours_str, NULL, 10);
+  if (hours == 0 && hours_str[0] != '0') {
+    printf("Invalid hours format.\n");
+    return STATUS_ERROR;
+  }
 
   int last_employee_count = dbhdr->count - 1;
 
@@ -33,7 +61,7 @@ int add_employee(struct dbheader_t *dbhdr, struct employee_t *employees,
   strncpy(employees[last_employee_count].address, address,
           sizeof(employees[last_employee_count].address));
 
-  employees[last_employee_count].hours = atoi(hours);
+  employees[last_employee_count].hours = hours;
   employees[last_employee_count].deleted = false;
 
   return STATUS_SUCCESS;
@@ -47,6 +75,10 @@ int delete_employee(struct dbheader_t *dbhdr, struct employee_t *employees,
   }
 
   int id = atoi(identifier);
+  if (id < 0 || id >= dbhdr->count) {
+    printf("Invalid employee ID.\n");
+    return STATUS_ERROR;
+  }
 
   employees[id].deleted = true;
 
@@ -199,4 +231,20 @@ int create_db_header(int fd, struct dbheader_t **headerOut) {
   *headerOut = header;
 
   return STATUS_SUCCESS;
+}
+
+void search_employees(struct dbheader_t *dbhdr, struct employee_t *employees,
+                      const char *name) {
+  printf("Searching for employees with name: %s\n", name);
+
+  for (int i = 0; i < dbhdr->count; i++) {
+    if (employees[i].deleted) {
+      continue;
+    }
+
+    if (strcmp(employees[i].name, name) == 0) {
+      printf("Employee %d:\n\t Name: %s, Address: %s, Hours: %d\n", i,
+             employees[i].name, employees[i].address, employees[i].hours);
+    }
+  }
 }

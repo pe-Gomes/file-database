@@ -28,5 +28,7 @@ int add_employee(struct dbheader_t *dbhdr, struct employee_t *employees,
                  char *addstring);
 int delete_employee(struct dbheader_t *dbhdr, struct employee_t *employees,
                     char *identifier);
+void search_employees(struct dbheader_t *dbhdr, struct employee_t *employees,
+                      const char *name);
 
 #endif
